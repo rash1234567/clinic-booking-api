@@ -5,33 +5,35 @@ import { createHash } from "node:crypto";
 const router = Router();
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const BOOKING_COLUMNS = "id, slot_id, name, email, status, created_at";
+
+function trimmed(value: unknown) {
+  return typeof value === "string" ? value.trim() : value ?? null;
+}
 
 // POST /bookings
 
 router.post("/bookings", async (req, res) => {
-  const { slot_id, name, email } = req.body ?? {};
+  const body =
+    req.body && typeof req.body === "object" && !Array.isArray(req.body)
+      ? req.body
+      : {};
+  const { slot_id, name, email } = body;
 
-  if (
-    typeof slot_id !== "string" ||
-    !slot_id.trim() ||
-    typeof name !== "string" ||
-    !name.trim() ||
-    typeof email !== "string" ||
-    !email.trim()
-  ) {
-    res.status(400).json({
-      error: "slot_id, name and email are required",
-    });
-    return;
-  }
+  const normalizedSlotId = typeof slot_id === "string" ? slot_id.trim() : "";
+  const normalizedName = typeof name === "string" ? name.trim() : "";
+  const normalizedEmail =
+    typeof email === "string" ? email.trim().toLowerCase() : "";
 
-  const normalizedSlotId = slot_id.trim();
-  const normalizedName = name.trim();
-  const normalizedEmail = email.trim().toLowerCase();
+  let validationError: string | null = null;
 
-  if (!EMAIL_REGEX.test(normalizedEmail)) {
-    res.status(400).json({ error: "invalid email address" });
-    return;
+  if (!normalizedSlotId || !normalizedName || !normalizedEmail) {
+    validationError = "slot_id, name and email are required";
+  } else if (!EMAIL_REGEX.test(normalizedEmail)) {
+    validationError = "invalid email address";
   }
 
   const idempotencyKey = req.header("Idempotency-Key")?.trim();
@@ -39,9 +41,10 @@ router.post("/bookings", async (req, res) => {
   const requestHash = createHash("sha256")
     .update(
       JSON.stringify({
-        slot_id: normalizedSlotId,
-        name: normalizedName,
-        email: normalizedEmail,
+        slot_id: trimmed(slot_id),
+        name: trimmed(name),
+        email:
+          typeof email === "string" ? email.trim().toLowerCase() : email ?? null,
       })
     )
     .digest("hex");
@@ -73,6 +76,14 @@ router.post("/bookings", async (req, res) => {
 
         const previous = existing.rows[0];
 
+        if (!previous) {
+          await client.query("ROLLBACK");
+          res.status(409).json({
+            error: "a request with this idempotency key is in progress",
+          });
+          return;
+        }
+
         if (previous.request_hash !== requestHash) {
           await client.query("ROLLBACK");
           res.status(422).json({
@@ -89,81 +100,87 @@ router.post("/bookings", async (req, res) => {
       }
     }
 
-    // Rate limit: maximum 5 attempts per email per minute.
-    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [
-      normalizedEmail,
-    ]);
+    // Rate limit: maximum 5 attempts per email per minute, failed ones included.
+    if (normalizedEmail) {
+      await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [
+        normalizedEmail,
+      ]);
 
-    const attemptsResult = await client.query(
-      `SELECT
-     COUNT(*)::int AS count,
-     MIN(attempted_at) AS oldest
-   FROM booking_attempts
-   WHERE email = $1
-     AND attempted_at > clock_timestamp() - INTERVAL '1 minute'`,
-      [normalizedEmail]
-    );
-
-    const attempts = attemptsResult.rows[0];
-
-    if (attempts.count >= 5) {
-      const retryResult = await client.query(
-        `SELECT GREATEST(
-       1,
-       CEIL(EXTRACT(EPOCH FROM (
-         $1::timestamptz + INTERVAL '1 minute' - clock_timestamp()
-       )))::int
-     ) AS retry_after`,
-        [attempts.oldest]
+      const attemptsResult = await client.query(
+        `SELECT
+           COUNT(*)::int AS count,
+           MIN(attempted_at) AS oldest
+         FROM booking_attempts
+         WHERE email = $1
+           AND attempted_at > clock_timestamp() - INTERVAL '1 minute'`,
+        [normalizedEmail]
       );
 
-      const retryAfter = retryResult.rows[0].retry_after;
+      const attempts = attemptsResult.rows[0];
 
-      await client.query("ROLLBACK");
+      if (attempts.count >= 5) {
+        const retryResult = await client.query(
+          `SELECT GREATEST(
+             1,
+             CEIL(EXTRACT(EPOCH FROM (
+               $1::timestamptz + INTERVAL '1 minute' - clock_timestamp()
+             )))::int
+           ) AS retry_after`,
+          [attempts.oldest]
+        );
 
-      res.setHeader("Retry-After", retryAfter);
-      res.status(429).json({
-        error: "too many booking attempts. Try again later.",
-      });
-      return;
+        const retryAfter = retryResult.rows[0].retry_after;
+
+        await client.query("ROLLBACK");
+
+        res.setHeader("Retry-After", String(retryAfter));
+        res.status(429).json({
+          error: "too many booking attempts. Try again later.",
+        });
+        return;
+      }
+
+      await client.query(
+        "INSERT INTO booking_attempts (email, attempted_at) VALUES ($1, clock_timestamp())",
+        [normalizedEmail]
+      );
     }
 
-    // Record this attempt, including attempts that later fail.
-    await client.query("INSERT INTO booking_attempts (email) VALUES ($1)", [
-      normalizedEmail,
-    ]);
-
-    // Check that the requested slot exists.
-    const slotResult = await client.query(
-      "SELECT id, start FROM slots WHERE id = $1",
-      [normalizedSlotId]
-    );
-
     let status: number;
-    let responseBody: any;
+    let responseBody: unknown;
 
-    if (slotResult.rowCount === 0) {
-      status = 404;
-      responseBody = { error: "slot not found" };
-    } else if (new Date(slotResult.rows[0].start).getTime() <= Date.now()) {
+    if (validationError) {
       status = 400;
-      responseBody = { error: "slot has already started" };
+      responseBody = { error: validationError };
     } else {
-      const bookingResult = await client.query(
-        `INSERT INTO bookings (slot_id, name, email)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (slot_id) WHERE status = 'confirmed'
-         DO NOTHING
-         RETURNING id, slot_id, name, email, status, created_at`,
-        [normalizedSlotId, normalizedName, normalizedEmail]
+      const slotResult = await client.query(
+        "SELECT id, start FROM slots WHERE id = $1",
+        [normalizedSlotId]
       );
 
-      if (bookingResult.rowCount === 0) {
-        status = 409;
-        responseBody = { error: "slot already booked" };
+      if (slotResult.rowCount === 0) {
+        status = 404;
+        responseBody = { error: "slot not found" };
+      } else if (new Date(slotResult.rows[0].start).getTime() <= Date.now()) {
+        status = 400;
+        responseBody = { error: "slot has already started" };
       } else {
-        status = 201;
-        responseBody = bookingResult.rows[0];
+        const bookingResult = await client.query(
+          `INSERT INTO bookings (slot_id, name, email)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (slot_id) WHERE status = 'confirmed'
+           DO NOTHING
+           RETURNING ${BOOKING_COLUMNS}`,
+          [normalizedSlotId, normalizedName, normalizedEmail]
+        );
+
+        if (bookingResult.rowCount === 0) {
+          status = 409;
+          responseBody = { error: "slot already booked" };
+        } else {
+          status = 201;
+          responseBody = bookingResult.rows[0];
+        }
       }
     }
 
@@ -194,9 +211,14 @@ router.post("/bookings", async (req, res) => {
 
 // GET /bookings/:id
 router.get("/bookings/:id", async (req, res) => {
+  if (!UUID_REGEX.test(req.params.id)) {
+    res.status(404).json({ error: "booking not found" });
+    return;
+  }
+
   try {
     const result = await pool.query(
-      `SELECT id, slot_id, name, email, status, created_at
+      `SELECT ${BOOKING_COLUMNS}
        FROM bookings
        WHERE id = $1`,
       [req.params.id]
@@ -215,15 +237,20 @@ router.get("/bookings/:id", async (req, res) => {
 });
 
 router.delete("/bookings/:id", async (req, res) => {
+  if (!UUID_REGEX.test(req.params.id)) {
+    res.status(404).json({ error: "booking not found" });
+    return;
+  }
+
   const client = await pool.connect();
 
   try {
     await client.query("BEGIN");
 
     const result = await client.query(
-      `SELECT id, slot_id, name, email, status, created_at
+      `SELECT ${BOOKING_COLUMNS}
        FROM bookings
-       WHERE id::text = $1
+       WHERE id = $1
        FOR UPDATE`,
       [req.params.id]
     );
@@ -238,7 +265,7 @@ router.delete("/bookings/:id", async (req, res) => {
 
     if (booking.status === "cancelled") {
       await client.query("ROLLBACK");
-      res.status(409).json({ error: "booking doesn't exist" });
+      res.status(409).json({ error: "booking already cancelled" });
       return;
     }
 
@@ -246,7 +273,7 @@ router.delete("/bookings/:id", async (req, res) => {
       `UPDATE bookings
        SET status = 'cancelled'
        WHERE id = $1
-       RETURNING id, slot_id, name, email, status, created_at`,
+       RETURNING ${BOOKING_COLUMNS}`,
       [booking.id]
     );
 
@@ -280,7 +307,12 @@ router.get("/bookings", async (req, res) => {
   const rawLimit = req.query.limit;
   const limit = rawLimit === undefined ? 10 : Number(rawLimit);
 
-  if (!Number.isInteger(limit) || limit < 1 || limit > 50) {
+  if (
+    (typeof rawLimit === "string" && rawLimit.trim() === "") ||
+    !Number.isInteger(limit) ||
+    limit < 1 ||
+    limit > 50
+  ) {
     res.status(400).json({ error: "limit must be between 1 and 50" });
     return;
   }
@@ -302,9 +334,7 @@ router.get("/bookings", async (req, res) => {
         typeof decoded.created_at !== "string" ||
         !Number.isFinite(Date.parse(decoded.created_at)) ||
         typeof decoded.id !== "string" ||
-        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-          decoded.id
-        )
+        !UUID_REGEX.test(decoded.id)
       ) {
         throw new Error("Invalid cursor");
       }
@@ -318,7 +348,8 @@ router.get("/bookings", async (req, res) => {
 
   try {
     const result = await pool.query(
-      `SELECT id, slot_id, name, email, status, created_at
+      `SELECT ${BOOKING_COLUMNS},
+         to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS cursor_ts
        FROM bookings
        WHERE email = $1
          AND (
@@ -336,19 +367,20 @@ router.get("/bookings", async (req, res) => {
     );
 
     const hasMore = result.rows.length > limit;
-    const bookings = result.rows.slice(0, limit);
-
-    const lastBooking = bookings[bookings.length - 1];
+    const page = result.rows.slice(0, limit);
+    const lastBooking = page[page.length - 1];
 
     const nextCursor =
       hasMore && lastBooking
         ? Buffer.from(
             JSON.stringify({
-              created_at: lastBooking.created_at.toISOString(),
+              created_at: lastBooking.cursor_ts,
               id: lastBooking.id,
             })
           ).toString("base64url")
         : null;
+
+    const bookings = page.map(({ cursor_ts, ...booking }) => booking);
 
     res.status(200).json({
       bookings,

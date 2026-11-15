@@ -4,8 +4,13 @@ CREATE TABLE IF NOT EXISTS slots (
     provider TEXT NOT NULL,
     start TIMESTAMPTZ NOT NULL,
     "end" TIMESTAMPTZ NOT NULL,
-    CHECK ("end" > start)
+    start_text TEXT,
+    end_text TEXT
 );
+
+ALTER TABLE slots ADD COLUMN IF NOT EXISTS start_text TEXT;
+ALTER TABLE slots ADD COLUMN IF NOT EXISTS end_text TEXT;
+ALTER TABLE slots DROP CONSTRAINT IF EXISTS slots_check;
 
 CREATE TABLE IF NOT EXISTS bookings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
