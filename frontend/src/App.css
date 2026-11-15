@@ -1,0 +1,418 @@
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f6f8fb;
+  color: #172b4d;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.page {
+  max-width: 1120px;
+  margin: auto;
+  padding: 0 28px;
+}
+
+.header {
+  height: 78px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #e8edf3;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 21px;
+  font-weight: 750;
+  color: #153d70;
+}
+
+.brand-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: #176b87;
+  color: white;
+  font-size: 25px;
+}
+
+.header-label {
+  color: #728096;
+  font-size: 14px;
+}
+
+.hero {
+  padding: 65px 0 45px;
+  max-width: 650px;
+}
+
+.eyebrow {
+  color: #16819a;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 1.5px;
+}
+
+.hero h1 {
+  margin: 12px 0;
+  font-size: clamp(32px, 5vw, 48px);
+  letter-spacing: -1.8px;
+}
+
+.hero-description,
+.form-description {
+  color: #718096;
+  line-height: 1.7;
+}
+
+.booking-layout {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 28px;
+  align-items: start;
+}
+
+.slots-section,
+.form-section,
+.confirmation {
+  background: white;
+  border: 1px solid #e8edf3;
+  border-radius: 16px;
+  padding: 26px;
+  box-shadow: 0 8px 30px rgba(28, 52, 84, 0.04);
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+h2 {
+  margin: 7px 0 18px;
+  font-size: 23px;
+}
+
+.refresh-button,
+.secondary-button {
+  border: 1px solid #dce5ed;
+  border-radius: 8px;
+  padding: 9px 13px;
+  background: white;
+  color: #176b87;
+  cursor: pointer;
+}
+
+.slot-list {
+  display: grid;
+  gap: 12px;
+}
+
+.slot-card {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr auto 25px;
+  align-items: center;
+  gap: 10px;
+  padding: 17px;
+  text-align: left;
+  background: white;
+  border: 1px solid #e1e8ef;
+  border-radius: 11px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.slot-card:hover,
+.slot-card.selected {
+  border-color: #16819a;
+  background: #f0fafb;
+}
+
+.slot-provider {
+  font-weight: 700;
+}
+
+.slot-date,
+.slot-time {
+  color: #68798f;
+  font-size: 13px;
+}
+
+.slot-indicator {
+  color: #16819a;
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.form-section form {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-section label {
+  margin: 17px 0 8px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.form-section input {
+  width: 100%;
+  padding: 13px;
+  border: 1px solid #dce5ed;
+  border-radius: 8px;
+  outline: none;
+}
+
+.form-section input:focus {
+  border-color: #16819a;
+  box-shadow: 0 0 0 3px #16819a18;
+}
+
+.selected-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 13px;
+  margin-bottom: 8px;
+  border-radius: 9px;
+  background: #f0fafb;
+  color: #176b87;
+  font-size: 13px;
+}
+
+.primary-button {
+  width: 100%;
+  margin-top: 22px;
+  padding: 14px;
+  border: 0;
+  border-radius: 9px;
+  background: #176b87;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary-button:hover {
+  background: #10576f;
+}
+
+.primary-button:disabled {
+  background: #aab9c5;
+  cursor: not-allowed;
+}
+
+.error-message {
+  color: #c0392b;
+  font-size: 13px;
+}
+
+.message {
+  color: #718096;
+  padding: 20px 0;
+}
+
+.confirmation {
+  max-width: 620px;
+  margin: 0 auto 50px;
+  text-align: center;
+}
+
+.success-icon {
+  width: 55px;
+  height: 55px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 15px;
+  border-radius: 50%;
+  background: #e6f7ee;
+  color: #18834c;
+  font-size: 28px;
+}
+
+.confirmation-details {
+  margin: 22px 0;
+  padding: 15px;
+  background: #f6f8fb;
+  border-radius: 10px;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.confirmation-details p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+footer {
+  padding: 45px 0 25px;
+  color: #8794a6;
+  font-size: 12px;
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .booking-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .hero {
+    padding: 42px 0 30px;
+  }
+
+  .slot-card {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .slot-time {
+    grid-column: 1;
+  }
+
+  .slot-indicator {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .page {
+    padding: 0 16px;
+  }
+}
+
+/* Fix default Vite styling conflicts */
+
+#root {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+
+body {
+  background: #f6f8fb;
+  color: #172b4d;
+}
+
+h1,
+h2,
+h3 {
+  color: #172b4d;
+}
+
+.hero {
+  text-align: left;
+}
+
+.form-section {
+  text-align: left;
+}
+
+.slot-provider {
+  color: #172b4d;
+}
+
+.slot-date,
+.slot-time {
+  color: #68798f;
+}
+
+.slot-card {
+  color: #172b4d;
+  background: #ffffff;
+}
+
+.form-section input {
+  background-color: #ffffff;
+  color: #172b4d;
+}
+
+.form-section input::placeholder {
+  color: #98a4b3;
+  opacity: 1;
+}
+
+.form-section label {
+  color: #344563;
+}
+
+button {
+  color: inherit;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.success-modal {
+  width: 100%;
+  max-width: 420px;
+  padding: 36px 28px;
+  border-radius: 14px;
+  background: #fff;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+}
+
+.success-modal h2 {
+  margin: 16px 0 10px;
+}
+
+.success-modal p {
+  margin-bottom: 24px;
+  color: #68798f;
+}
+
+.success-modal .primary-button {
+  width: 100%;
+}
+
+.admin-section {
+  max-width: 850px;
+  margin: 60px auto;
+  padding: 32px;
+  background: #fff;
+  border-radius: 12px;
+}
+
+.admin-section form {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-slot-form {
+  display: grid;
+  gap: 10px;
+  padding: 20px;
+  margin: 15px 0;
+  border: 1px solid #e5eaf0;
+  border-radius: 8px;
+}
+
+.admin-section input {
+  padding: 12px;
+  border: 1px solid #dce2ea;
+  border-radius: 6px;
+  background: white;
+  color: #172b4d;
+}
