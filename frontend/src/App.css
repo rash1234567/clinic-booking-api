@@ -106,6 +106,12 @@ h2 {
   font-size: 23px;
 }
 
+.booking-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
 .refresh-button,
 .secondary-button {
   border: 1px solid #dce5ed;
@@ -113,6 +119,15 @@ h2 {
   padding: 9px 13px;
   background: white;
   color: #176b87;
+  cursor: pointer;
+}
+
+.cancel-button {
+  border: 1px solid #b21a1a;
+  border-radius: 8px;
+  padding: 9px 13px;
+  background: #b21a1a;
+  color: #ffffff;
   cursor: pointer;
 }
 
@@ -182,6 +197,7 @@ h2 {
   border-color: #16819a;
   box-shadow: 0 0 0 3px #16819a18;
 }
+
 
 .selected-summary {
   display: flex;
@@ -458,4 +474,341 @@ button {
   align-items: center;
   gap: 16px;
   flex-wrap: wrap;
+}
+
+.my-bookings-section.form-section {
+  margin-top: 16px;
+  /* width: 50%;
+  max-width: 620px;
+  padding: 36px;
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06); */
+}
+
+
+/* Admin slot manager */
+
+.admin-section {
+  width: 100%;
+  max-width: 900px;
+  margin: 60px auto;
+  padding: 28px;
+  background: #fff;
+  border: 1px solid #e8edf3;
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(28, 52, 84, 0.04);
+}
+
+.admin-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.admin-heading h2 {
+  margin-bottom: 8px;
+}
+
+.add-slot-button {
+  flex-shrink: 0;
+}
+
+.admin-section form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.admin-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.admin-slot-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #e1e8ef;
+  border-radius: 11px;
+  background: #fff;
+}
+
+.admin-slot-summary {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 17px;
+  border: 0;
+  background: #fff;
+  color: #172b4d;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-slot-summary:hover {
+  background: #f5fafb;
+}
+
+.admin-slot-number {
+  color: #16819a;
+  font-size: 11px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.admin-slot-summary strong {
+  font-size: 15px;
+}
+
+.admin-slot-summary > span:not(.admin-slot-number) {
+  color: #718096;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.admin-slot-summary .edit-indicator {
+  color: #176b87;
+  font-weight: 700;
+}
+
+.admin-slot-editor {
+  display: grid;
+  gap: 9px;
+  padding: 17px;
+  border-top: 1px solid #e8edf3;
+  background: #f9fbfd;
+}
+
+.admin-slot-editor label {
+  margin-top: 7px;
+  color: #344563;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.admin-slot-editor input {
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #dce5ed;
+  border-radius: 8px;
+  background: #fff;
+  color: #172b4d;
+}
+
+.admin-slot-editor input:focus {
+  outline: none;
+  border-color: #16819a;
+  box-shadow: 0 0 0 3px #16819a18;
+}
+
+.admin-card-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.admin-card-actions button {
+  flex: 1;
+}
+
+.admin-warning {
+  margin-top: 4px;
+  color: #b21a1a;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* Responsive layout */
+
+@media (max-width: 760px) {
+  .admin-slots-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-section {
+    margin: 35px auto;
+    padding: 18px;
+  }
+
+  .admin-heading {
+    flex-direction: column;
+  }
+
+  .add-slot-button {
+    width: 100%;
+  }
+
+  .admin-card-actions {
+    flex-direction: column;
+  }
+
+  .header {
+    height: auto;
+    min-height: 78px;
+    padding: 14px 0;
+    gap: 12px;
+  }
+
+  .header-actions {
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .header-label {
+    display: none;
+  }
+
+  .booking-actions {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 420px) {
+  .page {
+    padding: 0 12px;
+  }
+
+  .admin-section {
+    padding: 15px;
+  }
+
+  .slots-section,
+  .form-section,
+  .confirmation {
+    padding: 18px;
+  }
+
+  .brand {
+    font-size: 18px;
+  }
+
+  .brand-icon {
+    width: 30px;
+    height: 30px;
+  }
+}
+
+/* Admin slot manager */
+
+.admin-slot-form {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-slot-form h3 {
+  margin: 0 0 12px;
+}
+
+.admin-slot-form input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.admin-form-actions,
+.admin-card-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.admin-slots-list {
+  margin-top: 32px;
+}
+
+.admin-slots-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.admin-slots-heading h3 {
+  margin: 0;
+}
+
+.admin-slots-heading span {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.admin-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.admin-slot-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  min-width: 0;
+}
+
+.admin-slot-details h3 {
+  margin: 8px 0;
+}
+
+.admin-slot-details p {
+  margin: 6px 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-slot-number {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.save-schedule-button {
+  margin-top: 24px;
+}
+
+.admin-warning {
+  color: #b45309;
+  font-size: 13px;
+  margin-top: 16px;
+}
+
+@media (max-width: 760px) {
+  .admin-slots-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-slot-form {
+    padding: 16px;
+  }
+
+  .admin-slot-card {
+    padding: 16px;
+  }
+}
+
+
+.admin-date-picker-wrapper {
+  width: 100%;
+}
+
+.admin-date-picker {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: white;
+  color: #172b4d;
 }

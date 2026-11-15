@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import {
   getSlots,
@@ -12,6 +11,23 @@ import {
 } from "./services/api";
 import type { Slot, Booking } from "./services/api";
 import "./App.css";
+import AdminSlotManager from "./components/AdminSlotManager";
+
+type AdminSlot = {
+  key: string;
+  provider: string;
+  start: string;
+  end: string;
+};
+
+function createEmptySlot(): AdminSlot {
+  return {
+    key: crypto.randomUUID(),
+    provider: "",
+    start: "",
+    end: "",
+  };
+}
 
 function App() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -35,10 +51,12 @@ function App() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [showCancellationModal, setShowCancellationModal] = useState(false);
+  const [hasSearchedBookings, setHasSearchedBookings] = useState(false);
 
-  const [adminSlots, setAdminSlots] = useState([
-    { id: "", provider: "", start: "", end: "" },
+  const [adminSlots, setAdminSlots] = useState<AdminSlot[]>([
+    createEmptySlot(),
   ]);
+  const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [resetMessage, setResetMessage] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
 
@@ -51,9 +69,7 @@ function App() {
       setSlots(data);
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to load appointments."
+        err instanceof Error ? err.message : "Unable to load appointments."
       );
     } finally {
       setLoading(false);
@@ -76,7 +92,9 @@ function App() {
       setLoginKey("");
     } catch {
       clearApiKey();
-      setLoginError("Unable to authenticate. Check your API key and try again.");
+      setLoginError(
+        "Unable to authenticate. Check your API key and try again."
+      );
     } finally {
       setLoginLoading(false);
     }
@@ -95,6 +113,9 @@ function App() {
     setError("");
     setBookingsError("");
     setResetMessage("");
+    setHasSearchedBookings(false);
+    setAdminSlots([createEmptySlot()]);
+    setEditingSlot(null);
   }
 
   async function loadMyBookings(cursor?: string) {
@@ -107,7 +128,7 @@ function App() {
       setBookingsLoading(true);
       setBookingsError("");
 
-      const result = await getBookings(searchEmail, 10, cursor);
+      const result = await getBookings(searchEmail.trim(), 10, cursor);
 
       const activeBookings = result.bookings.filter(
         (booking) => booking.status === "confirmed"
@@ -117,6 +138,7 @@ function App() {
         cursor ? [...previous, ...activeBookings] : activeBookings
       );
 
+      setHasSearchedBookings(true);
       setNextCursor(result.next_cursor);
       setSelectedBooking(null);
     } catch (err) {
@@ -136,9 +158,7 @@ function App() {
       setSelectedBooking(booking);
     } catch (err) {
       setBookingsError(
-        err instanceof Error
-          ? err.message
-          : "Unable to retrieve booking."
+        err instanceof Error ? err.message : "Unable to retrieve booking."
       );
     }
   }
@@ -202,15 +222,73 @@ function App() {
     }
   }
 
+  function addAdminSlot() {
+    const newSlot = createEmptySlot();
+
+    setAdminSlots((previous) => [...previous, newSlot]);
+    setEditingSlot(newSlot.key);
+    setResetMessage("");
+  }
+
+  function updateAdminSlot(
+    key: string,
+    field: "provider" | "start" | "end",
+    value: string
+  ) {
+    setAdminSlots((previous) =>
+      previous.map((slot) =>
+        slot.key === key ? { ...slot, [field]: value } : slot
+      )
+    );
+
+    setResetMessage("");
+  }
+
+  function deleteAdminSlot(key: string) {
+    setAdminSlots((previous) => previous.filter((slot) => slot.key !== key));
+
+    if (editingSlot === key) {
+      setEditingSlot(null);
+    }
+
+    setResetMessage("");
+  }
+
   async function handleReset(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (adminSlots.length === 0) {
+      setResetMessage("Add at least one appointment slot.");
+      return;
+    }
+
+    const invalidSlot = adminSlots.some((slot) => {
+      const start = new Date(slot.start).getTime();
+      const end = new Date(slot.end).getTime();
+
+      return (
+        !slot.provider.trim() ||
+        !slot.start ||
+        !slot.end ||
+        !Number.isFinite(start) ||
+        !Number.isFinite(end) ||
+        end <= start
+      );
+    });
+
+    if (invalidSlot) {
+      setResetMessage(
+        "Complete every slot and ensure the end time is after the start time."
+      );
+      return;
+    }
 
     try {
       setResetLoading(true);
       setResetMessage("");
 
       const formattedSlots = adminSlots.map((slot) => ({
-        id: slot.id.trim(),
+        id: crypto.randomUUID(),
         provider: slot.provider.trim(),
         start: new Date(slot.start).toISOString(),
         end: new Date(slot.end).toISOString(),
@@ -218,32 +296,19 @@ function App() {
 
       await resetSlots(formattedSlots);
 
-      setResetMessage("Slots and bookings have been reset successfully.");
-
-      setAdminSlots([
-        { id: "", provider: "", start: "", end: "" },
-      ]);
+      setResetMessage("Appointment schedule saved successfully.");
+      setEditingSlot(null);
 
       await loadSlots();
     } catch (err) {
       setResetMessage(
-        err instanceof Error ? err.message : "Reset failed."
+        err instanceof Error
+          ? err.message
+          : "Unable to save appointment schedule."
       );
     } finally {
       setResetLoading(false);
     }
-  }
-
-  function updateAdminSlot(
-    index: number,
-    field: "id" | "provider" | "start" | "end",
-    value: string
-  ) {
-    setAdminSlots((previous) =>
-      previous.map((slot, i) =>
-        i === index ? { ...slot, [field]: value } : slot
-      )
-    );
   }
 
   if (!authenticated) {
@@ -271,9 +336,7 @@ function App() {
               required
             />
 
-            {loginError && (
-              <p className="error-message">{loginError}</p>
-            )}
+            {loginError && <p className="error-message">{loginError}</p>}
 
             <button
               type="submit"
@@ -300,7 +363,7 @@ function App() {
           <span className="header-label">Appointment Booking</span>
           <button
             type="button"
-            className="secondary-button"
+            className="cancel-button"
             onClick={handleLogout}
           >
             Log out
@@ -327,14 +390,20 @@ function App() {
           </p>
 
           <div className="confirmation-details">
-            <p><strong>Booking ID:</strong> {confirmation.id}</p>
+            <p>
+              <strong>Booking ID:</strong> {confirmation.id}
+            </p>
             <p>
               <strong>Provider:</strong>{" "}
               {slots.find((slot) => slot.id === confirmation.slot_id)
                 ?.provider ?? confirmation.slot_id}
             </p>
-            <p><strong>Email:</strong> {confirmation.email}</p>
-            <p><strong>Status:</strong> {confirmation.status}</p>
+            <p>
+              <strong>Email:</strong> {confirmation.email}
+            </p>
+            <p>
+              <strong>Status:</strong> {confirmation.status}
+            </p>
           </div>
 
           <button
@@ -368,7 +437,7 @@ function App() {
               <p className="message">Loading appointments...</p>
             ) : slots.filter((slot) => slot.available).length === 0 ? (
               <p className="message">
-                No appointments are currently available.
+                No slots are currently available.
               </p>
             ) : (
               <div className="slot-list">
@@ -427,9 +496,9 @@ function App() {
             )}
 
             <form onSubmit={handleBooking}>
-              <label htmlFor="name">Full name</label>
+              <label htmlFor="booking-name">Full name</label>
               <input
-                id="name"
+                id="booking-name"
                 type="text"
                 placeholder="Enter your full name"
                 value={name}
@@ -437,9 +506,9 @@ function App() {
                 required
               />
 
-              <label htmlFor="email">Email address</label>
+              <label htmlFor="booking-email">Email address</label>
               <input
-                id="email"
+                id="booking-email"
                 type="email"
                 placeholder="you@example.com"
                 value={email}
@@ -461,7 +530,7 @@ function App() {
         </div>
       )}
 
-      <section className="my-bookings-section">
+      <section className="my-bookings-section form-section">
         <p className="eyebrow">MANAGE YOUR APPOINTMENTS</p>
         <h2>My Bookings</h2>
 
@@ -473,6 +542,9 @@ function App() {
         <form
           onSubmit={(event) => {
             event.preventDefault();
+            setMyBookings([]);
+            setNextCursor(null);
+            setSelectedBooking(null);
             loadMyBookings();
           }}
           className="my-bookings-form"
@@ -484,7 +556,13 @@ function App() {
             type="email"
             placeholder="you@example.com"
             value={searchEmail}
-            onChange={(event) => setSearchEmail(event.target.value)}
+            onChange={(event) => {
+              setSearchEmail(event.target.value);
+              setMyBookings([]);
+              setHasSearchedBookings(false);
+              setNextCursor(null);
+              setSelectedBooking(null);
+            }}
             required
           />
 
@@ -497,9 +575,7 @@ function App() {
           </button>
         </form>
 
-        {bookingsError && (
-          <p className="error-message">{bookingsError}</p>
-        )}
+        {bookingsError && <p className="error-message">{bookingsError}</p>}
 
         {myBookings.length > 0 && (
           <div className="my-bookings-list">
@@ -552,11 +628,21 @@ function App() {
         {selectedBooking && (
           <div className="booking-detail">
             <h3>Booking details</h3>
-            <p><strong>Booking ID:</strong> {selectedBooking.id}</p>
-            <p><strong>Name:</strong> {selectedBooking.name}</p>
-            <p><strong>Email:</strong> {selectedBooking.email}</p>
-            <p><strong>Slot ID:</strong> {selectedBooking.slot_id}</p>
-            <p><strong>Status:</strong> {selectedBooking.status}</p>
+            <p>
+              <strong>Booking ID:</strong> {selectedBooking.id}
+            </p>
+            <p>
+              <strong>Name:</strong> {selectedBooking.name}
+            </p>
+            <p>
+              <strong>Email:</strong> {selectedBooking.email}
+            </p>
+            <p>
+              <strong>Slot ID:</strong> {selectedBooking.slot_id}
+            </p>
+            <p>
+              <strong>Status:</strong> {selectedBooking.status}
+            </p>
             <p>
               <strong>Created:</strong>{" "}
               {new Date(selectedBooking.created_at).toLocaleString()}
@@ -564,13 +650,13 @@ function App() {
           </div>
         )}
 
-        {myBookings.length === 0 &&
-          !bookingsLoading &&
-          !bookingsError && (
-            <p className="message">
-              Search using your email to see your appointments.
-            </p>
-          )}
+        {myBookings.length === 0 && !bookingsLoading && !bookingsError && (
+          <p className="message">
+            {hasSearchedBookings
+              ? "No bookings found for this email address."
+              : "Search using your email to see your appointments."}
+          </p>
+        )}
       </section>
 
       {showCancellationModal && (
@@ -597,106 +683,7 @@ function App() {
         </div>
       )}
 
-      <section className="admin-section">
-        <p className="eyebrow">ADMINISTRATION</p>
-        <h2>Manage appointment slots</h2>
-
-        <p className="form-description">
-          Add appointment slots for your healthcare providers.
-          Resetting replaces all existing slots and deletes existing bookings.
-        </p>
-
-        <form onSubmit={handleReset}>
-          {adminSlots.map((slot, index) => (
-            <div className="admin-slot-form" key={index}>
-              <h3>Slot {index + 1}</h3>
-
-              <label htmlFor={`slot-id-${index}`}>Slot ID</label>
-              <input
-                id={`slot-id-${index}`}
-                placeholder="e.g. s1"
-                required
-                value={slot.id}
-                onChange={(event) =>
-                  updateAdminSlot(index, "id", event.target.value)
-                }
-              />
-
-              <label htmlFor={`provider-${index}`}>Provider name</label>
-              <input
-                id={`provider-${index}`}
-                placeholder="e.g. Dr Ade"
-                required
-                value={slot.provider}
-                onChange={(event) =>
-                  updateAdminSlot(index, "provider", event.target.value)
-                }
-              />
-
-              <label htmlFor={`start-${index}`}>Appointment start</label>
-              <input
-                id={`start-${index}`}
-                type="datetime-local"
-                required
-                value={slot.start}
-                onChange={(event) =>
-                  updateAdminSlot(index, "start", event.target.value)
-                }
-              />
-
-              <label htmlFor={`end-${index}`}>Appointment end</label>
-              <input
-                id={`end-${index}`}
-                type="datetime-local"
-                required
-                value={slot.end}
-                onChange={(event) =>
-                  updateAdminSlot(index, "end", event.target.value)
-                }
-              />
-
-              {adminSlots.length > 1 && (
-                <button
-                  type="button"
-                  className="cancel-button"
-                  onClick={() =>
-                    setAdminSlots((previous) =>
-                      previous.filter((_, i) => i !== index)
-                    )
-                  }
-                >
-                  Remove slot
-                </button>
-              )}
-            </div>
-          ))}
-
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={() =>
-              setAdminSlots((previous) => [
-                ...previous,
-                { id: "", provider: "", start: "", end: "" },
-              ])
-            }
-          >
-            Add another slot
-          </button>
-
-          <button
-            type="submit"
-            className="primary-button"
-            disabled={resetLoading}
-          >
-            {resetLoading
-              ? "Resetting..."
-              : "Reset all slots and bookings"}
-          </button>
-
-          {resetMessage && <p>{resetMessage}</p>}
-        </form>
-      </section>
+      <AdminSlotManager onSaved={loadSlots} />
 
       <footer>
         <p>CarePoint · Making healthcare appointments easier.</p>

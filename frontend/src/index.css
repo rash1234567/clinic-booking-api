@@ -109,3 +109,13 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+::selection {
+  background: #dbeafe;
+  color: #172b4d;
+}
+
+input::selection,
+textarea::selection {
+  background: #bfdbfe;
+  color: #172b4d;
+}
