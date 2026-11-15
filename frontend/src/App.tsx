@@ -11,6 +11,7 @@ import {
 import type { Slot, Booking } from "./services/api";
 import "./App.css";
 import AdminSlotManager from "./components/AdminSlotManager";
+import { Eye, EyeOff } from "lucide-react";
 
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
   const [loginKey, setLoginKey] = useState("");
   const [loginError, setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
 
   const [slots, setSlots] = useState<Slot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
@@ -223,14 +225,25 @@ function App() {
           <form onSubmit={handleLogin}>
             <label htmlFor="login-key">API key</label>
 
-            <input
-              id="login-key"
-              type="password"
-              placeholder="Enter your API key"
-              value={loginKey}
-              onChange={(event) => setLoginKey(event.target.value)}
-              required
-            />
+          <div className="password-input-wrapper">
+  <input
+    id="login-key"
+    type={showApiKey ? "text" : "password"}
+    placeholder="Enter your API key"
+    value={loginKey}
+    onChange={(event) => setLoginKey(event.target.value)}
+    required
+  />
+
+  <button
+    type="button"
+    className="password-toggle"
+    onClick={() => setShowApiKey((previous) => !previous)}
+    aria-label={showApiKey ? "Hide API key" : "Show API key"}
+  >
+    {showApiKey ? <EyeOff size={20} /> : <Eye size={20} />}
+  </button>
+</div>
 
             {loginError && <p className="error-message">{loginError}</p>}
 

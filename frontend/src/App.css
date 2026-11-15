@@ -1,4 +1,3 @@
-
 * {
   box-sizing: border-box;
 }
@@ -197,7 +196,6 @@ h2 {
   border-color: #16819a;
   box-shadow: 0 0 0 3px #16819a18;
 }
-
 
 .selected-summary {
   display: flex;
@@ -485,7 +483,6 @@ button {
   border-radius: 14px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06); */
 }
-
 
 /* Admin slot manager */
 
@@ -798,7 +795,6 @@ button {
   }
 }
 
-
 .admin-date-picker-wrapper {
   width: 100%;
 }
@@ -811,4 +807,33 @@ button {
   border-radius: 8px;
   background: white;
   color: #172b4d;
+}
+
+.password-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.password-input-wrapper input {
+  width: 100%;
+  padding-right: 45px;
+  box-sizing: border-box;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  padding: 4px;
+}
+
+.password-toggle:hover {
+  color: #1e293b;
 }
