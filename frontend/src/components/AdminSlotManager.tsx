@@ -26,11 +26,6 @@ const emptyDraft: SlotDraft = {
   end: "",
 };
 
-function getLocalDateTime(date = new Date()): string {
-  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-
-  return localDate.toISOString().slice(0, 16);
-}
 
 function toLocalDateTime(date: Date | null): string {
   if (!date) return "";

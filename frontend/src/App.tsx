@@ -5,7 +5,6 @@ import {
   getBookings,
   getBooking,
   cancelBooking,
-  resetSlots,
   setApiKey as saveApiKey,
   clearApiKey,
 } from "./services/api";
@@ -13,21 +12,6 @@ import type { Slot, Booking } from "./services/api";
 import "./App.css";
 import AdminSlotManager from "./components/AdminSlotManager";
 
-type AdminSlot = {
-  key: string;
-  provider: string;
-  start: string;
-  end: string;
-};
-
-function createEmptySlot(): AdminSlot {
-  return {
-    key: crypto.randomUUID(),
-    provider: "",
-    start: "",
-    end: "",
-  };
-}
 
 function App() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -53,12 +37,8 @@ function App() {
   const [showCancellationModal, setShowCancellationModal] = useState(false);
   const [hasSearchedBookings, setHasSearchedBookings] = useState(false);
 
-  const [adminSlots, setAdminSlots] = useState<AdminSlot[]>([
-    createEmptySlot(),
-  ]);
-  const [editingSlot, setEditingSlot] = useState<string | null>(null);
-  const [resetMessage, setResetMessage] = useState("");
-  const [resetLoading, setResetLoading] = useState(false);
+
+
 
   async function loadSlots() {
     try {
@@ -112,10 +92,7 @@ function App() {
     setSearchEmail("");
     setError("");
     setBookingsError("");
-    setResetMessage("");
     setHasSearchedBookings(false);
-    setAdminSlots([createEmptySlot()]);
-    setEditingSlot(null);
   }
 
   async function loadMyBookings(cursor?: string) {
@@ -222,94 +199,13 @@ function App() {
     }
   }
 
-  function addAdminSlot() {
-    const newSlot = createEmptySlot();
+ 
 
-    setAdminSlots((previous) => [...previous, newSlot]);
-    setEditingSlot(newSlot.key);
-    setResetMessage("");
-  }
+ 
 
-  function updateAdminSlot(
-    key: string,
-    field: "provider" | "start" | "end",
-    value: string
-  ) {
-    setAdminSlots((previous) =>
-      previous.map((slot) =>
-        slot.key === key ? { ...slot, [field]: value } : slot
-      )
-    );
+ 
 
-    setResetMessage("");
-  }
-
-  function deleteAdminSlot(key: string) {
-    setAdminSlots((previous) => previous.filter((slot) => slot.key !== key));
-
-    if (editingSlot === key) {
-      setEditingSlot(null);
-    }
-
-    setResetMessage("");
-  }
-
-  async function handleReset(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (adminSlots.length === 0) {
-      setResetMessage("Add at least one appointment slot.");
-      return;
-    }
-
-    const invalidSlot = adminSlots.some((slot) => {
-      const start = new Date(slot.start).getTime();
-      const end = new Date(slot.end).getTime();
-
-      return (
-        !slot.provider.trim() ||
-        !slot.start ||
-        !slot.end ||
-        !Number.isFinite(start) ||
-        !Number.isFinite(end) ||
-        end <= start
-      );
-    });
-
-    if (invalidSlot) {
-      setResetMessage(
-        "Complete every slot and ensure the end time is after the start time."
-      );
-      return;
-    }
-
-    try {
-      setResetLoading(true);
-      setResetMessage("");
-
-      const formattedSlots = adminSlots.map((slot) => ({
-        id: crypto.randomUUID(),
-        provider: slot.provider.trim(),
-        start: new Date(slot.start).toISOString(),
-        end: new Date(slot.end).toISOString(),
-      }));
-
-      await resetSlots(formattedSlots);
-
-      setResetMessage("Appointment schedule saved successfully.");
-      setEditingSlot(null);
-
-      await loadSlots();
-    } catch (err) {
-      setResetMessage(
-        err instanceof Error
-          ? err.message
-          : "Unable to save appointment schedule."
-      );
-    } finally {
-      setResetLoading(false);
-    }
-  }
+ 
 
   if (!authenticated) {
     return (

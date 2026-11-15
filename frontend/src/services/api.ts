@@ -21,7 +21,7 @@ export interface BookingsResponse {
   next_cursor: string | null;
 }
 
-const API_URL = '/api';
+const API_URL = import.meta.env.VITE_API_URL || "/api";
 
 let apiKey = '';
 
